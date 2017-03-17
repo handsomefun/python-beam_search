@@ -3,6 +3,7 @@ import numpy as np
 from language_model import *
 import Queue as Q
 from math import log
+import os
 gram1_map = {}  
 gram2_map = {}
 gram3_map = {}
@@ -38,11 +39,10 @@ def beam_search_with_lm(prob, beam_width=1000, alpha = 0.0, top_paths=1, merge_r
     previous_queue = Q.PriorityQueue(beam_width)
     #previous_queue.put(Path(['40'], 0.0, 0.0, -1))
     previous_queue.put(Path(['40'], 1.0, 1.0, -1))
-    print prob.shape
     height, width = prob.shape
     #expand frame by frame 
     for i in range(width):
-        print 'step: ', i
+        #print 'step: ', i
         probi = prob[:,i]
         topk_index = np.argsort(probi)[-1 * 20 : ].tolist() #only expand topk node
         topk_index.reverse() #prob decrease
@@ -83,7 +83,7 @@ def beam_search_with_lm(prob, beam_width=1000, alpha = 0.0, top_paths=1, merge_r
             result[merge_path] = path.prob_ctc
     
     sortresult = sorted(result.items(), key = lambda x : x[1], reverse = True)
-    print sortresult[0:10]    
+    return sortresult[0:top_paths]    
 
 def joint(phonelist):
     if phonelist is None or len(phonelist) == 0 :
@@ -119,15 +119,33 @@ def loadphonemap(inpath):
 def translate(ind_list):
     print '_'.join(ind_list)
 
+
+def test():
+    inpath = '34.prob.txt'
+    prob = build_prob(inpath)    
+    result_list = beam_search_with_lm(prob.transpose(), beam_width = 1000, alpha = 0.0, top_paths = 10) 
+    for path, prob in result_list:
+        phone_ids = path.split(' ')
+        phones = [phonemap[phone_id] for phone_id in phone_ids[1 : ]]
+        print '%s\t\t\t%f' % (' '.join(phones), prob)
+
+def test_batch(result_file):
+    with open(result_file, 'r') as reader:
+        for line in reader:
+            print line.strip()
+            mfcc_path, prob_path, real_label, predict_label, editdistance_rate, ctc_prob = line.strip().split('\t')
+            prob = build_prob(prob_path)
+            result_list = beam_search_with_lm(prob.transpose(), beam_width = 1000, alpha = 0.0, top_paths = 10) 
+            print real_label
+            for path, prob in result_list:
+                phone_ids = path.split(' ')
+                phones = [phonemap[phone_id] for phone_id in phone_ids[1 : ]]
+                print '\t\t%s\t\t\t%f' % (' '.join(phones), prob)
+
 if __name__ == '__main__':
     inpath = '34.prob.txt'
     lm_path = 'lls_libris_o3.txt'
-    #global gram1_map
-    #global gram2_map
-    #global gram3_map
-    #global backoff2_map
-    #global phonemap
     phonemap = loadphonemap('phonemap.txt')
-    prob = build_prob(inpath)    
     gram1_map, gram2_map, gram3_map, backoff2_map = load_model(lm_path)
-    beam_search_with_lm(prob.transpose(), beam_width = 1000, alpha = 0.0) 
+    #test()
+    test_batch('meta.txt')
