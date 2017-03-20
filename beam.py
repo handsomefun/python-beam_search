@@ -20,6 +20,10 @@ class Path(object):
         return -1 * cmp(self.prob_ctc, other.prob_ctc)
 
 def get_lm_logprob(seq, smooth_factor=-6.0):
+    if seq[-1] == '39':
+        return 0
+    if len(seq) > 1 and seq[-1] == seq[-2]:
+        return 0
     seq = seq[-3 : ]
     if len(seq) == 1:
         return gram1_map[' '.join(seq)]
@@ -130,22 +134,26 @@ def test():
         print '%s\t\t\t%f' % (' '.join(phones), prob)
 
 def test_batch(result_file):
+    dirname = os.path.dirname(result_file)
+    filename = os.path.basename(result_file)
+    print dirname, filename
     with open(result_file, 'r') as reader:
         for line in reader:
             print line.strip()
             mfcc_path, prob_path, real_label, predict_label, editdistance_rate, ctc_prob = line.strip().split('\t')
-            prob = build_prob(prob_path)
-            result_list = beam_search_with_lm(prob.transpose(), beam_width = 1000, alpha = 0.0, top_paths = 10) 
-            print real_label
+            prob = build_prob(os.path.join(dirname, prob_path.strip()))
+            result_list = beam_search_with_lm(prob.transpose(), beam_width = 1000, alpha = 0.00, top_paths = 10) 
+            print '####%s' % real_label
+            print '----%s\t\t\t%s' % (predict_label, ctc_prob)
             for path, prob in result_list:
                 phone_ids = path.split(' ')
                 phones = [phonemap[phone_id] for phone_id in phone_ids[1 : ]]
-                print '\t\t%s\t\t\t%f' % (' '.join(phones), prob)
+                print '    %s\t\t\t%f' % (' '.join(phones), prob)
+            print ''
 
 if __name__ == '__main__':
-    inpath = '34.prob.txt'
     lm_path = 'lls_libris_o3.txt'
     phonemap = loadphonemap('phonemap.txt')
     gram1_map, gram2_map, gram3_map, backoff2_map = load_model(lm_path)
     #test()
-    test_batch('meta.txt')
+    test_batch('/home/research/fanjun/temp1/deep_speech/result/good.txt')
