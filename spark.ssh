@@ -1,0 +1,18 @@
+BASE_DIR=/home/research/fanjun/featurejoin
+cd $BASE_DIR
+
+
+for(( i=16;i<18;i++));
+do
+    line=$(date +%Y%m%d -d -${i}+day)
+    line1=$(date +%Y-%m-%d -d -${i}+day)
+
+    echo "date : " $line
+
+    spark-submit --name "[fan]frog training" --driver-cores 3 --num-executors 20  --driver-memory 10g --executor-memory 4g --master yarn-cluster --supervise --queue research /home/research/fanjun/featurejoin/mergefeature.py /research/xierm/lecture_rec_data_test/raw_file/${line}/* /user/hive/warehouse/research.db/solar_user_info_static_extend/dt=${line1}/* /user/hive/warehouse/research.db/solar_user_queryandclick_feature_fct0/dt=${line1}/*  /research/fanjun/uservector/*  /research/fanjun/lectore_raw_feature/${line}/  & 
+    if [ $? -ne 0 ];
+    then
+        echo 'generate lecture raw data failure' | mail -s 'spark task error when build lecture training data.' fanjun@fenbi.com 
+        break
+    fi
+done
